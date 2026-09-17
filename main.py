@@ -8,7 +8,7 @@ from typing import List, Tuple
 import logging
 
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format="%(asctime)s | %(levelname)-8s | %(name)s | %(message)s",
     datefmt="%H:%M:%S",
 )
@@ -48,8 +48,8 @@ def measure_speed(url: str, num_requests: int = 10, timeout: int = 60) -> None:
     times: List[float] = []
     sizes: List[int] = []
 
-    print(f"Тестируем: {url}")
-    print(f"Количество запросов: {num_requests}")
+    logger.info(f"Ссылка для теста: {url}")
+    logger.info(f"Количество запросов: {num_requests}")
 
     for i in range(1, num_requests + 1):
         try:
@@ -57,7 +57,7 @@ def measure_speed(url: str, num_requests: int = 10, timeout: int = 60) -> None:
             times.append(elapsed)
             sizes.append(size)
             size_mb = size / (1024 * 1024)
-            logger.debug(f"Запрос {i:2d}: {elapsed:7.3f} с  |  {size_mb:8.2f} МБ")
+            logger.info(f"Запрос {i:2d}: {elapsed:7.3f} с  |  {size_mb:8.2f} МБ")
         except requests.exceptions.Timeout:
             logger.error(f"Запрос {i:2d}: таймаут ({timeout} с)")
             return
