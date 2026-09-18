@@ -14,6 +14,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+BYTES_TO_MB = 1024 * 1024
+
 
 def download_once(url: str, timeout: int = 60) -> Tuple[float, int]:
     """
@@ -39,46 +41,55 @@ def download_once(url: str, timeout: int = 60) -> Tuple[float, int]:
     return elapsed, len(content)
 
 
-def measure_speed(url: str, num_requests: int = 10, timeout: int = 60) -> None:
-    """
-    Основная функция
-    Замеряет среднее время запроса и выводит его.
-    Вывод ошибок return, далее возможно прокидывать выше
-    """
+def download_files(
+    url: str,
+    num_requests: int,
+    timeout: int
+) -> None:
     times: List[float] = []
     sizes: List[int] = []
-
-    logger.info(f"Ссылка для теста: {url}")
-    logger.info(f"Количество запросов: {num_requests}")
-
     for i in range(1, num_requests + 1):
         try:
             elapsed, size = download_once(url, timeout=timeout)
             times.append(elapsed)
             sizes.append(size)
-            size_mb = size / (1024 * 1024)
-            logger.info(f"Запрос {i:2d}: {elapsed:7.3f} с  |  {size_mb:8.2f} МБ")
+            size_mb = size / BYTES_TO_MB
+            logger.info("Запрос %2d: %7.3f с  |  %8.2f МБ", i, elapsed, size_mb)
         except requests.exceptions.Timeout:
-            logger.error(f"Запрос {i:2d}: таймаут ({timeout} с)")
+            logger.error("Запрос %2d: таймаут (%d с)", i, timeout)
             return
         except requests.exceptions.RequestException as e:
-            logger.error(f"Запрос {i:2d}: ошибка — {e}")
+            logger.error("Запрос %2d: ошибка — %s", i, e)
             return
         except Exception as e:
-            logger.error(f"Запрос {i:2d}: неожиданная ошибка — {e}")
+            logger.error("Запрос %2d: неожиданная ошибка — %s", i, e)
             return
+    return times, sizes
 
+
+def measure_stats(times: list, sizes: list) -> Tuple[int, int]:
     total_time = sum(times)
     total_size = sum(sizes)
     avg_time = total_time / len(times)
     avg_size = total_size / len(sizes)
+    speed_mbs = (total_size / BYTES_TO_MB) / total_time
+    return avg_time, avg_size, speed_mbs, total_size
 
-    speed_mbs = (total_size / (1024 * 1024)) / total_time
 
-    logger.info(f"Среднее время запроса : {avg_time:.3f} с")
-    logger.info(f"Объём скачанных данных: {total_size / (1024 * 1024):.2f} МБ "
-          f"(в среднем {avg_size / (1024 * 1024):.2f} МБ за запрос)")
-    logger.info(f"Скорость               : {speed_mbs:.2f} МБ/с")
+def measure_speed(url: str, num_requests: int = 10, timeout: int = 60) -> None:
+    logger.info("Ссылка для теста: %s", url)
+    logger.info("Количество запросов: %d", num_requests)
+    times, sizes = download_files(url, num_requests, timeout)
+    avg_time, avg_size, speed_mbs, total_size = measure_stats(
+        times, sizes
+    )
+    logger.info("Среднее время запроса : %.3f с", avg_time)
+    logger.info(
+        "Объём скачанных данных: %.2f МБ (в среднем %.2f МБ за запрос)",
+        total_size / BYTES_TO_MB,
+        avg_size / BYTES_TO_MB,
+    )
+    logger.info("Скорость: %.2f МБ/с", speed_mbs)
 
 
 def main() -> None:
